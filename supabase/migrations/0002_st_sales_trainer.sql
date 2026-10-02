@@ -39,8 +39,12 @@ $$;
 
 revoke all on function public.st_is_workspace_member(uuid) from public;
 revoke all on function public.st_is_workspace_admin(uuid) from public;
+revoke execute on function public.st_is_workspace_member(uuid) from anon;
+revoke execute on function public.st_is_workspace_admin(uuid) from anon;
 grant execute on function public.st_is_workspace_member(uuid) to authenticated;
 grant execute on function public.st_is_workspace_admin(uuid) to authenticated;
+grant execute on function public.st_is_workspace_member(uuid) to service_role;
+grant execute on function public.st_is_workspace_admin(uuid) to service_role;
 
 -- ---------------------------------------------------------------------------
 -- st_profiles
@@ -48,7 +52,6 @@ grant execute on function public.st_is_workspace_admin(uuid) to authenticated;
 create table if not exists public.st_profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   display_name text,
-  is_manager boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -141,13 +144,60 @@ create policy st_sessions_insert_self on public.st_sessions
     and user_id = auth.uid()
   );
 
-create policy st_sessions_update_self on public.st_sessions
+create or replace function public.st_sessions_guard_identity_columns()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if tg_op <> 'UPDATE' then
+    return new;
+  end if;
+
+  if auth.uid() is null then
+    return new;
+  end if;
+
+  if public.st_is_workspace_admin(old.workspace_id) then
+    return new;
+  end if;
+
+  if new.user_id is distinct from old.user_id
+     or new.workspace_id is distinct from old.workspace_id
+     or new.scenario_id is distinct from old.scenario_id then
+    raise exception 'st_sessions identity columns are immutable for non-admin members'
+      using errcode = '42501';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke all on function public.st_sessions_guard_identity_columns() from public;
+grant execute on function public.st_sessions_guard_identity_columns() to authenticated;
+grant execute on function public.st_sessions_guard_identity_columns() to service_role;
+
+create trigger st_sessions_guard_identity
+  before update on public.st_sessions
+  for each row
+  execute function public.st_sessions_guard_identity_columns();
+
+create policy st_sessions_update_rep on public.st_sessions
   for update to authenticated
   using (
     public.st_is_workspace_member(workspace_id)
-    and (user_id = auth.uid() or public.st_is_workspace_admin(workspace_id))
+    and user_id = auth.uid()
   )
-  with check (public.st_is_workspace_member(workspace_id));
+  with check (
+    public.st_is_workspace_member(workspace_id)
+    and user_id = auth.uid()
+  );
+
+create policy st_sessions_update_admin on public.st_sessions
+  for update to authenticated
+  using (public.st_is_workspace_admin(workspace_id))
+  with check (public.st_is_workspace_admin(workspace_id));
 
 -- ---------------------------------------------------------------------------
 -- st_transcript_lines

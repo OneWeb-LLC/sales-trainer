@@ -37,7 +37,7 @@ flowchart LR
 
 | Table | Purpose |
 |-------|---------|
-| `st_profiles` | Local projection `id = auth.users.id`, display name, `is_manager` flag |
+| `st_profiles` | Local projection `id = auth.users.id`, display name (manager/admin via `ao_org_members`) |
 | `st_scenarios` | Workspace-owned scenario definitions (persona, goals, hidden context, objections, rubric) |
 | `st_sessions` | Roleplay session lifecycle + LiveKit room name |
 | `st_transcript_lines` | Ordered transcript (rep / prospect / system) |
