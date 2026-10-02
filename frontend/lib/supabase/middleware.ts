@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { AUTH_STORAGE_KEY } from '@/lib/st/constants';
 
 /**
  * Refreshes the Supabase auth session on every request and writes the rotated
@@ -14,6 +15,7 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
+      cookieOptions: { name: AUTH_STORAGE_KEY },
       cookies: {
         getAll() {
           return request.cookies.getAll();

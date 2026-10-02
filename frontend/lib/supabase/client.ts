@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr';
+import { AUTH_STORAGE_KEY } from '@/lib/st/constants';
 
 /**
  * Browser-side Supabase client. Reads/writes the auth session from cookies so
@@ -8,6 +9,9 @@ import { createBrowserClient } from '@supabase/ssr';
 export function createClient() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      cookieOptions: { name: AUTH_STORAGE_KEY },
+    }
   );
 }
