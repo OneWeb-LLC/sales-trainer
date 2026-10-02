@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { AUTH_STORAGE_KEY } from '@/lib/st/constants';
 
 /**
  * Server-side Supabase client bound to the request cookies. Use this in Server
@@ -14,6 +15,7 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
+      cookieOptions: { name: AUTH_STORAGE_KEY },
       cookies: {
         getAll() {
           return cookieStore.getAll();
